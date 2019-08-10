@@ -80,6 +80,12 @@ if __name__== '__main__' :
 
     loss = nn.CrossEntropyLoss()
     #activation function으로 CrossEntropy 함수 사용
+    #softmax is included in this loss funtion(가장 처음에 적용시키고 activation이 일어남)
+    
+    # 가장기본적인 SGD otim
+    # otim = torch.optim.SGD(params=model.parameters(), lr=0.01) #Stochastic Graient Descent : loss가 감소시키는 방향으로 otim이 일어난다.(방향은 무작위)
+    #learning rate : w' = w - lr * gradient_value
+    
     optim = torch.optim.Adam(models.parameters(), lr=2e-4, betas=(0.5, 0.99), eps=1e-8)
     #Optimazer로 Adam사용 상세내용은  leanring rate(lr) weight를 loss로 갱신할때 gradient값을 어느정도 보정
     # /batas 이전grad를 반영, 현재grad크기를 보정/ eps 계산할때쓰는것
@@ -88,14 +94,15 @@ if __name__== '__main__' :
     #Epochs 를 n으로 설정
     total_step = 0
     list_loss = list()
-    list_acc = list()
+    list_acc = list() # =[] 해도 list
 
     for epoch in range(EPOCHS):
         for i, data in enumerate(data_loader):
             #Enumerate label도 같이 출력
+            # for input, label in data_loader해도 됨
             total_step = total_step + 1
             input, label = data[0], data[1]  #, data의 구성? 0=32,1,28*28 / 1= 32개의 label
-            # input shape [batch size ,channel, height, width]
+            # input shape [batch size, channel, height, width]
             input = input.view(input.shape[0], -1) if MODEL == 'MLP' else input
             # [batch size, channel*height*width][32, 28*28*1] 1차원 mlp에 넣기위해
             #view id를 보존/reshape: id 보존 x
@@ -107,10 +114,14 @@ if __name__== '__main__' :
             list_loss.append(l.detach().item())  # item torch tensor 를 python의 형식으로 바꿔줌
 
             optim.zero_grad() #optim를 정하기 이전에 기존 gradient를 0로 설정(중복을 방지)
-            l.backward()
-            optim.step()
+            l.backward() #loss 값을 만드는데 기여한 weight에 미분값을 나눠줌
+            optim.step() # weight들이 피드백을 받음 (위의 backward에서 받은 미분값)
             print(l.detach().item())
-
+            
+            etimation = torch.argmax(output, dim=1) # 10개의 label노드중 모델이 계산한 가장 큰 값을 표출 [label, batch] 이므로 32개의 값을 나타내도록
+            n_correct_ansewers = torch.sum(torch.eq(estimation, label))
+            acc = (float(n_correct_ansers) / 64) * 100
+            list_acc.append(acc)
     torch.save(models, '{}.pt'.format(MODEL)) #model 저장 키워드로 object를 받음
 
     plt.figure()
